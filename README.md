@@ -6,6 +6,8 @@ Custom component for Home Assistant Core for Whistle GPS pet tracker. This integ
 
 Donations aren't required, but are always appreciated. If you enjoy this integration, consider buying me a coffee by clicking on the link above.
 
+**Note:** If you previously used the "pywhistle" custom component, you will need to remove your credentials from the configuration.yaml file and any template sensors that you created prior to installing this custom component. In addition, installing this integration should overwrite the whistle folder which was created by pywhistle and located within the custom_components folder. However, it is best to manually delete the whistle folder prior to installing this custom component.
+
 **Prior To Installation**
 
 You will need credentials consisting of your whistle `username(e-mail)` and `password`.
