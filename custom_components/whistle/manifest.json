@@ -1,7 +1,7 @@
 {
   "domain": "whistle",
   "name": "Whistle",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "config_flow": true,
   "documentation": "https://github.com/RobertD502/home-assistant-whistle",
   "issue_tracker": "https://github.com/RobertD502/home-assistant-whistle/issues",
