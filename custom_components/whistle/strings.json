@@ -1,0 +1,20 @@
+{
+  "config": {
+    "title": "Whistle",
+    "step": {
+      "user": {
+        "title": "Fill in your Whistle credentials",
+        "data": {
+          "username": "Whistle Username",
+          "password": "Whistle Password"
+        }
+      }
+    },
+    "error": {
+      "auth_error": "Whistle authentication failed. Are your credentials correct?"
+    },
+    "abort": {
+      "already_configured": "Whistle is already configured"
+    }
+  }
+}
