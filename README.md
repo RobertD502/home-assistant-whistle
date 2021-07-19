@@ -52,8 +52,21 @@ Available attributes:
 | `activity_minutes_active` | Number of `minutes` your pet has been active today |
 | `active_minutes_rest` | Number of minutes your pet has been resting today |
 | `activity_goal` | Current activity goal, in `minutes`, for today as set up from the app |
-| `activity_distance` | Distance covered, in `miles`, by your pet today |
-| `activity_calories` | Number of calories burned by your pet today |
+| `activity_distance` | Distance covered, in `miles or km` depending on setting within Whistle app, by your pet today |
+| `activity_calories` | Number of calories, in `kcal`, burned by your pet today |
 | `24h_battery_wifi_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used Wi-Fi (also known as Power Save Mode) |
 | `24h_battery_cellular_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used the cellular network (this occurs when the tracker is not connected to Wi-Fi) |
 | `last_check_in` | Last date and time the Whistle device contacted the Whistle servers |
+
+### Sensor
+A sensor is created for each pet with a `state` that displays the most recent event from the timeline
+
+Available attributes:
+
+| Attribute | Description |
+| --- | --- |
+| `start_time` | The date and time when the event started. Date and time is displayed in the Home Assistant timezone. |
+| `end_time` | The date and time when the event ended. Date and time is displayed in the Home Assistant timezone. |
+| `duration` | The length of the event in `minutes` |
+| `distance` | Distance covered by your pet during this event. Distance is in `miles` or `km` depending on the setting within the Whistle app |
+| `calories` | Calories, in `kcal`, burned by your pet during this event
