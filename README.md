@@ -31,7 +31,7 @@ and place inside your Home Assistant Core installation's `custom_components` dir
 ## Features
 
 ### Whistle GPS Tracker
-Whistle devices are exposed as `device_tracker` entities and have a `state` that displays `place name` as defined in the Whistle app. For example, if you've set up two places in the Whistle app, `Home` and `Vet`, if the whistle tracker is located at `Home`then the `state` of the device_tracker will be `Home`. If the whistle tracker is found to be at the `Vet`, then the `state` of the device_tracker will be `Vet`. If the device tracker is not located in any of the predefined places, the `state` of the device_tracker will be `Away`.  
+Whistle devices are exposed as `device_tracker` entities and have a `state` that displays `place name` as defined in the Whistle app. For example, if you've set up two places in the Whistle app, `Home` and `Vet`, if the whistle tracker is located at `Home` then the `state` of the device_tracker will be `Home`. If the whistle tracker is found to be at the `Vet`, then the `state` of the device_tracker will be `Vet`. If the device tracker is not located in any of the predefined places, the `state` of the device_tracker will be `Away`.  
 
 Icon: the icon of the device_tracker will either be a cat or a dog depending on the pet associated with the Whistle device.
 
@@ -52,6 +52,6 @@ Available attributes:
 | `activity_goal` | Current activity goal, in `minutes`, for today as set up from the app |
 | `activity_distance` | Distance covered, in `miles`, by your pet today |
 | `activity_calories` | Number of calories burned by your pet today |
-| `24h_battery_wifi_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used Wi-Fi(also known as Power Save Mode) |
+| `24h_battery_wifi_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used Wi-Fi (also known as Power Save Mode) |
 | `24h_battery_cellular_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used the cellular network (this occurs when the tracker is not connected to Wi-Fi) |
 | `last_check_in` | Last date and time the Whistle device contacted the Whistle servers |
