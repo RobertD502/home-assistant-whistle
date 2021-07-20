@@ -60,3 +60,16 @@ Available attributes:
 | `24h_battery_wifi_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used Wi-Fi(also known as Power Save Mode) |
 | `24h_battery_cellular_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used the cellular network (this occurs when the tracker is not connected to Wi-Fi) |
 | `last_check_in` | Last date and time the Whistle device contacted the Whistle servers |
+
+### Sensor
+A sensor is created for each pet with a `state` that displays the most recent event from the timeline
+
+Available attributes:
+
+| Attribute | Description |
+| --- | --- |
+| `start_time` | The date and time when the event started. Date and time is displayed in the Home Assistant timezone. |
+| `end_time` | The date and time when the event ended. Date and time is displayed in the Home Assistant timezone. |
+| `duration` | The length of the event in `minutes` |
+| `distance` | Distance covered by your pet during this event. Distance is in `miles` or `km` depending on the setting within the Whistle app |
+| `calories` | Calories, in `kcal`, burned by your pet during this event
