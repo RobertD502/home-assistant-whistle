@@ -1,11 +1,12 @@
 {
   "domain": "whistle",
   "name": "Whistle",
-  "version": "0.0.2",
+  "version": "0.0.3",
+  "iot_class": "cloud_polling",
   "config_flow": true,
   "documentation": "https://github.com/RobertD502/home-assistant-whistle",
   "issue_tracker": "https://github.com/RobertD502/home-assistant-whistle/issues",
-  "requirements": ["git+https://github.com/RobertD502/pywhistle@master#pywhistle==0.0.3"],
+  "requirements": ["git+https://github.com/RobertD502/pywhistle@master#pywhistle==0.0.4"],
   "dependencies": [],
   "codeowners": ["@robertd502"]
 }
