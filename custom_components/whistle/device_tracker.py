@@ -2,9 +2,11 @@
 """Whistle Tracker Platform"""
 
 import logging
+import aiohttp
 from datetime import timedelta, datetime
 from zoneinfo import ZoneInfo
 from homeassistant.helpers import entity_platform
+from homeassistant.exceptions import PlatformNotReady
 from homeassistant.components.device_tracker.const import SOURCE_TYPE_GPS
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from .const import DOMAIN
@@ -36,13 +38,15 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Whistle tracker devices."""
     whistle = hass.data[DOMAIN]
-
-    await whistle.async_init()
-    get_pets = await whistle.get_pets()
-
     pets = []
+    try:
+        await whistle.async_init()
+        get_pets = await whistle.get_pets()
+    except Exception as e:
+        _LOGGER.error("Failed to get pets from Whistle servers")
+        raise PlatformNotReady from e
 
-    for pet in get_pets:
+    for pet in get_pets["pets"]:
         pets.append(WhistleTracker(pet, whistle))
 
     async_add_entities(pets, True)
@@ -51,9 +55,45 @@ class WhistleTracker(TrackerEntity):
     """Representation of Whistle Device Tracker"""
 
     def __init__(self, pet, whistle):
-        self._pet = pet
+        """ Build WhistleTracker
+            whistle = aiohttp session
+            pet = initially-fetched pet data
+        """
         self._whistle = whistle
+        self._pet_id = pet['id']
+        self._device_id = pet['device']['serial_number']
+        self._available = False
+        self._pet_update(pet)
+        self._failed_update = False
+
+    def _pet_update(self, pet):
         self._available = True
+        self._name = pet['name']
+        self._species = pet['profile']['species']
+        self._latitude = pet['last_location']['latitude']
+        self._longitude = pet['last_location']['longitude']
+        self._location_accuracy = pet['last_location']['uncertainty_meters']
+        self._location_address = pet['last_location']['description']['address']
+        self._device_id = pet['device']['serial_number']
+        time_zone = pet['profile']['time_zone_name']
+        self._last_check_in = datetime.fromisoformat(pet['device']['last_check_in'].replace(' ' + time_zone, '')).replace(tzinfo=ZoneInfo(time_zone)).astimezone()
+        self._battery_level = pet['device']['battery_level']
+        self._battery_status = pet['device']['battery_status']
+        self._pending_locate = pet['device']['pending_locate']
+        self._activity_streak = pet['activity_summary']['current_streak']
+        self._activity_minutes_active = pet['activity_summary']['current_minutes_active']
+        self._activity_minutes_rest = pet['activity_summary']['current_minutes_rest']
+        self._activity_goal = pet['activity_summary']['current_activity_goal']['minutes']
+        self._current_place_id = pet['last_location']['place']['id']
+
+    def _device_dailies_places_update(self, device, dailies, places):
+        self._battery_days_left = device['device']['battery_stats']['battery_days_left']
+        self._24h_battery_wifi_usage = round(((float(device['device']['battery_stats']['prior_usage_minutes']['24h']['power_save_mode']) / 1440) * 100), 0)
+        self._24h_battery_cellular_usage = round(((float(device['device']['battery_stats']['prior_usage_minutes']['24h']['cellular']) / 1440) * 100), 0)
+        self._activity_distance = round(dailies['dailies'][0]['distance'], 1)
+        self._activity_calories = round(dailies['dailies'][0]['calories'], 1)
+        self._places = places
+
 
     @property
     def should_poll(self):
@@ -164,7 +204,7 @@ class WhistleTracker(TrackerEntity):
         return self._available
 
     @property
-    def device_state_attributes(self) -> dict:
+    def extra_state_attributes(self) -> dict:
         """Return attributes."""
         return {
             ATTR_BATTERY_STATUS: self.battery_status,
@@ -182,43 +222,28 @@ class WhistleTracker(TrackerEntity):
         }
 
     async def async_update(self):
+        """ Retrieve latest data from Whistle Servers """
         _LOGGER.info('Updating Whistle data')
         try:
             await self._whistle.async_init()
-            pets = await self._whistle.get_pets()
+            get_pet = await self._whistle.get_pet(self._pet_id)
+            device = await self._whistle.get_device(self._device_id)
+            dailies = await self._whistle.get_dailies(self._pet_id)
+            places = await self._whistle.get_places()
         except Exception as e:
-            _LOGGER.error("There was an error while updating: %s", e)
-        _LOGGER.debug("Retrieved data:")
-        _LOGGER.debug(pets)
-        if not pets:
-            _LOGGER.warning("No Pets found")
+            if self._failed_update:
+                _LOGGER.warning(
+                    "Failed to update data for device '%s' from Whistle servers",
+                    self.name,
+                )
+                self._available = False
+                self.async_write_ha_state()
+                return
+
+            _LOGGER.debug("First failed data update for device '%s'", self.name)
+            self._failed_update = True
             return
-        for animal in pets['pets']:
-            dailies = await self._whistle.get_dailies(animal['id'])
-            device = await self._whistle.get_device(animal['device']['serial_number'])
-            self._places = await self._whistle.get_places()
-            try:
-                self._current_place_id = animal['last_location']['place']['id']
-            except Exception as e:
-                self._current_place_id = 0
-            self._latitude = animal['last_location']['latitude']
-            self._longitude = animal['last_location']['longitude']
-            self._location_accuracy = animal['last_location']['uncertainty_meters']
-            self._location_address = animal['last_location']['description']['address']
-            self._device_id = animal['device']['serial_number']
-            time_zone = animal['profile']['time_zone_name']
-            self._last_check_in = datetime.fromisoformat(animal['device']['last_check_in'].replace(' ' + time_zone, '')).replace(tzinfo=ZoneInfo(time_zone)).astimezone()
-            self._name = animal['name']
-            self._species = animal['profile']['species']
-            self._battery_level = animal['device']['battery_level']
-            self._battery_status = animal['device']['battery_status']
-            self._battery_days_left = device['device']['battery_stats']['battery_days_left']
-            self._pending_locate = animal['device']['pending_locate']
-            self._activity_streak = animal['activity_summary']['current_streak']
-            self._activity_minutes_active = animal['activity_summary']['current_minutes_active']
-            self._activity_minutes_rest = animal['activity_summary']['current_minutes_rest']
-            self._activity_goal = animal['activity_summary']['current_activity_goal']['minutes']
-            self._activity_distance = round(dailies['dailies'][0]['distance'], 1)
-            self._activity_calories = round(dailies['dailies'][0]['calories'], 1)
-            self._24h_battery_wifi_usage = round(((float(device['device']['battery_stats']['prior_usage_minutes']['24h']['power_save_mode']) / 1440) * 100), 0)
-            self._24h_battery_cellular_usage = round(((float(device['device']['battery_stats']['prior_usage_minutes']['24h']['cellular']) / 1440) * 100), 0)
+        pet = get_pet['pet']
+        self._failed_update = False
+        self._pet_update(pet)
+        self._device_dailies_places_update(device, dailies, places)
