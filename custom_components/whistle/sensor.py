@@ -1,6 +1,8 @@
 """Whistle Sensor Platform"""
 import logging
+import aiohttp
 from datetime import timedelta, datetime
+from homeassistant.exceptions import PlatformNotReady
 from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN
 
@@ -23,13 +25,15 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Whistle event sensor."""
     whistle = hass.data[DOMAIN]
-
-    await whistle.async_init()
-    get_pets = await whistle.get_pets()
-
     pets = []
+    try:
+        await whistle.async_init()
+        get_pets = await whistle.get_pets()
+    except Exception as e:
+        _LOGGER.error("Failed to get pets from Whistle servers")
+        raise PlatformNotReady from e
 
-    for pet in get_pets:
+    for pet in get_pets["pets"]:
         pets.append(WhistleEventSensor(pet, whistle))
 
     async_add_entities(pets, True)
@@ -38,9 +42,29 @@ class WhistleEventSensor(SensorEntity):
     """Representation of Whistle Event Sensor"""
 
     def __init__(self, pet, whistle):
-        self._pet = pet
+        """ Build WhistleTracker
+            whistle = aiohttp session
+            pet = initially-fetched pet data
+        """
         self._whistle = whistle
+        self._pet_id = pet['id']
+        self._device_id = pet['device']['serial_number']
+        self._available = False
+        self._pet_update(pet)
+        self._failed_update = False
+
+    def _pet_update(self, pet):
         self._available = True
+        self._name = pet['name']
+        self._species = pet['profile']['species']
+
+    def _daily_items_update(self, daily_items):
+        self._event_title = daily_items['daily_items'][0]['title']
+        self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
+        self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
+        self._duration = daily_items['daily_items'][0]['data']['duration']
+        self._distance = daily_items['daily_items'][0]['data']['distance']
+        self._calories = daily_items['daily_items'][0]['data']['calories']
 
     @property
     def should_poll(self):
@@ -104,29 +128,24 @@ class WhistleEventSensor(SensorEntity):
         }
 
     async def async_update(self):
-        _LOGGER.info('Updating Whistle Event sensor data')
+        """ Retrieve latest data from Whistle Servers """
+        _LOGGER.info('Updating Whistle event data')
         try:
             await self._whistle.async_init()
-            pets = await self._whistle.get_pets()
+            dailies = await self._whistle.get_dailies(self._pet_id)
+            daily_items = await self._whistle.get_dailies_daily_items(self._pet_id, dailies['dailies'][0]['day_number'])
         except Exception as e:
-            _LOGGER.error("There was an error while updating: %s", e)
-        _LOGGER.debug("Retrieved data:")
-        _LOGGER.debug(pets)
-        if not pets:
-            _LOGGER.warning("No Pets found")
+            if self._failed_update:
+                _LOGGER.warning(
+                    "Failed to update event data for device '%s' from Whistle servers",
+                    self.name,
+                )
+                self._available = False
+                self.async_write_ha_state()
+                return
+
+            _LOGGER.debug("First failed event data update for device '%s'", self.name)
+            self._failed_update = True
             return
-        for animal in pets['pets']:
-            dailies = await self._whistle.get_dailies(animal['id'])
-            daily_items = await self._whistle.get_dailies_daily_items(animal['id'], dailies['dailies'][0]['day_number'])
-            try:
-                self._name = animal['name']
-                self._device_id = animal['device']['serial_number']
-                self._species = animal['profile']['species']
-                self._event_title = daily_items['daily_items'][0]['title']
-                self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
-                self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
-                self._duration = daily_items['daily_items'][0]['data']['duration']
-                self._distance = daily_items['daily_items'][0]['data']['distance']
-                self._calories = daily_items['daily_items'][0]['data']['calories']
-            except Exception as e:
-                _LOGGER.error("There was an error while updating Whistle Event Sensor: %s", e)
+        self._failed_update = False
+        self._daily_items_update(daily_items)
