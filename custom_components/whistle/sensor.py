@@ -147,5 +147,8 @@ class WhistleEventSensor(SensorEntity):
             _LOGGER.debug("First failed event data update for device '%s'", self.name)
             self._failed_update = True
             return
+        if len(daily_items['daily_items']) > 0:
+            self._daily_items_update(daily_items)
+        else:
+            self._available = False
         self._failed_update = False
-        self._daily_items_update(daily_items)
