@@ -149,7 +149,9 @@ class WhistleEventSensor(SensorEntity):
             return
         if len(daily_items['daily_items']) > 0:
             self._daily_items_update(daily_items)
+            self._available = True
+            self._failed_update = False
         else:
             _LOGGER.info("No event found to report. This occurs at midnight. '%s' sensor will become available once an event has been reported to the Whistle servers.", self.name)
             self._available = False
-        self._failed_update = False
+        
