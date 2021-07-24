@@ -59,12 +59,28 @@ class WhistleEventSensor(SensorEntity):
         self._species = pet['profile']['species']
 
     def _daily_items_update(self, daily_items):
-        self._event_title = daily_items['daily_items'][0]['title']
-        self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
-        self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
-        self._duration = daily_items['daily_items'][0]['data']['duration']
-        self._distance = daily_items['daily_items'][0]['data']['distance']
-        self._calories = daily_items['daily_items'][0]['data']['calories']
+        """ Whistle events that are of type insight and low_activity don't have a numeric duration, distance, and calories key """ 
+        if daily_items['daily_items'][0]['type'] == "insight":
+            self._event_title = daily_items['daily_items'][0]['title']
+            self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
+            self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
+            self._duration = daily_items['daily_items'][0]['data']['category'].replace('_', ' ')
+            self._distance = 0
+            self._calories = 0
+        elif daily_items['daily_items'][0]['type'] == "low_activity":
+            self._event_title = daily_items['daily_items'][0]['title']
+            self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
+            self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
+            self._duration = daily_items['daily_items'][0]['data']['duration']
+            self._distance = 0
+            self._calories = 0
+        else:
+            self._event_title = daily_items['daily_items'][0]['title']
+            self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
+            self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
+            self._duration = daily_items['daily_items'][0]['data']['duration']
+            self._distance = daily_items['daily_items'][0]['data']['distance']
+            self._calories = daily_items['daily_items'][0]['data']['calories']
 
     @property
     def should_poll(self):
@@ -154,4 +170,3 @@ class WhistleEventSensor(SensorEntity):
         else:
             _LOGGER.info("No event found to report. This occurs at midnight. '%s' sensor will become available once an event has been reported to the Whistle servers.", self.name)
             self._available = False
-        
