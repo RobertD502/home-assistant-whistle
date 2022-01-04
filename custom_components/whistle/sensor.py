@@ -133,7 +133,7 @@ class WhistleEventSensor(SensorEntity):
         return self._available
 
     @property
-    def device_state_attributes(self) -> dict:
+    def extra_state_attributes(self) -> dict:
         """Return attributes."""
         return {
             ATTR_START_TIME: self.start_time,
