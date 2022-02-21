@@ -4,7 +4,10 @@
 import logging
 import aiohttp
 from datetime import timedelta, datetime
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 from homeassistant.helpers import entity_platform
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.components.device_tracker.const import SOURCE_TYPE_GPS
