@@ -86,6 +86,26 @@ class WhistleTracker(TrackerEntity):
         self._activity_goal = pet['activity_summary']['current_activity_goal']['minutes']
         self._current_place_id = pet['last_location']['place']['id']
 
+    def _pet_update_no_gps(self, pet):
+        self._available = True
+        self._name = pet['name']
+        self._species = pet['profile']['species']
+        self._latitude = '0'
+        self._longitude = '0'
+        self._location_accuracy = '0'
+        self._location_address = 'Home'
+        self._device_id = pet['device']['serial_number']
+        time_zone = pet['profile']['time_zone_name']
+        self._last_check_in = datetime.fromisoformat(pet['device']['last_check_in'].replace(' ' + time_zone, '')).replace(tzinfo=ZoneInfo(time_zone)).astimezone()
+        self._battery_level = pet['device']['battery_level']
+        self._battery_status = pet['device']['battery_status']
+        self._pending_locate = pet['device']['pending_locate']
+        self._activity_streak = pet['activity_summary']['current_streak']
+        self._activity_minutes_active = pet['activity_summary']['current_minutes_active']
+        self._activity_minutes_rest = pet['activity_summary']['current_minutes_rest']
+        self._activity_goal = pet['activity_summary']['current_activity_goal']['minutes']
+        self._current_place_id = '0'
+
     def _device_dailies_places_update(self, device, dailies, places):
         self._battery_days_left = device['device']['battery_stats']['battery_days_left']
         self._24h_battery_wifi_usage = round(((float(device['device']['battery_stats']['prior_usage_minutes']['24h']['power_save_mode']) / 1440) * 100), 0)
@@ -245,5 +265,8 @@ class WhistleTracker(TrackerEntity):
             return
         pet = get_pet['pet']
         self._failed_update = False
-        self._pet_update(pet)
+        if pet['device']['has_gps']:
+            self._pet_update(pet)
+        else:
+            self._pet_update_no_gps(pet)
         self._device_dailies_places_update(device, dailies, places)
