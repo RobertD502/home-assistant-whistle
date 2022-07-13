@@ -34,7 +34,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         raise PlatformNotReady from e
 
     for pet in get_pets["pets"]:
-        pets.append(WhistleEventSensor(pet, whistle))
+        if pet['device']['has_gps']:
+            pets.append(WhistleEventSensor(pet, whistle))
 
     async_add_entities(pets, True)
 
