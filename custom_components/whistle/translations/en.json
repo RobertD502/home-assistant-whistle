@@ -1,18 +1,29 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Whistle is already configured"
+            "already_configured": "Whistle account is already configured",
+            "reauth_successful": "Re-authentication was successful"
         },
         "error": {
-            "auth_error": "Whistle authentication failed. Are your credentials correct?"
+            "cannot_connect": "Failed to connect",
+            "incorrect_email_pass": "Invalid Email and/or Password for selected account",
+            "invalid_auth": "Invalid authentication. Are your credentials correct?",
+            "no_pets": "No pets found on account"
         },
         "step": {
             "user": {
                 "data": {
-                    "username": "Whistle Username",
-                    "password": "Whistle Password"
+                    "email": "Email",
+                    "password": "Password"
                 },
-                "title": "Fill in your Whistle credentials"
+                "title": "Fill in your Whistle account credentials"
+            },
+            "reauth_confirm": {
+                "data": {
+                    "email": "Email",
+                    "password": "Password"
+                },
+                "title": "Reauthenticate with your Whistle account credentials"
             }
         },
         "title": "Whistle"
