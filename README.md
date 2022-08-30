@@ -1,16 +1,18 @@
 # Whistle Home Assistant Integration
-<a href="https://www.buymeacoffee.com/RobertD502" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs) ![GitHub manifest version (path)](https://img.shields.io/github/manifest-json/v/RobertD502/home-assistant-whistle?filename=custom_components%2Fwhistle%2Fmanifest.json)
 
-Custom component for Home Assistant Core for Whistle GPS pet tracker. This integration was made for the `Whistle Go Explore`, however, it should also work with the new `Whistle Switch`- testers needed!
+<a href="https://www.buymeacoffee.com/RobertD502" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="100" width="424"></a>
 
-Donations aren't required, but are always appreciated. If you enjoy this integration, consider buying me a coffee by clicking on the link above.
+### A lot of work has been put into creating the backend and this integration. If you enjoy this integration, consider donating by clicking on the logo above.
 
-**Note:** If you previously used the "pywhistle" custom component, you will need to remove your credentials from the configuration.yaml file and any template sensors that you created prior to installing this custom component. In addition, installing this integration should overwrite the whistle folder which was created by pywhistle and located within the custom_components folder. However, it is best to manually delete the whistle folder prior to installing this custom component.
+***All proceeds go towards helping a local animal rescue.**
+
+
+This integration was made for the `Whistle Go Explore` and `Whistle Fit`. It should also work with the new `Whistle Switch`- testers needed!
 
 **Prior To Installation**
 
-You will need credentials consisting of your whistle `username(e-mail)` and `password`.
+You will need credentials consisting of your Whistle `email` and `password`.
 
 ## Installation
 
@@ -27,46 +29,34 @@ and place inside your Home Assistant Core installation's `custom_components` dir
 
 ## Setup
 1. Install this integration.
-2. Use Config Flow to configure the integration with your Whistle username(e-mail) and password.
-    * Initiate Config Flow by navigating to Configuration > Integrations > click the "+" button > find "Whistle" (restart Home Assistant and / or clear browser cache if you can't find it)
+2. Navigate to the Home Assistant Integrations page (Settings --> Devices & Services)
+3. Click the `+ ADD INTEGRATION` button in the lower right-hand corner
+4. Search for `Whistle`
 
-## Features
+# Devices
 
-### Whistle GPS Tracker
-Whistle devices are exposed as `device_tracker` entities and have a `state` that displays `place name` as defined in the Whistle app. For example, if you've set up two places in the Whistle app, `Home` and `Vet`, if the whistle tracker is located at `Home` then the `state` of the device_tracker will be `Home`. If the whistle tracker is found to be at the `Vet`, then the `state` of the device_tracker will be `Vet`. If the device tracker is not located in any of the predefined places, the `state` of the device_tracker will be `Away`.  
+A device is created for each pet. See below for the entities available and special notes.
 
-Icon: the icon of the device_tracker will either be a cat or a dog depending on the pet associated with the Whistle device.
+# Entities
 
-Available attributes:
+| Entity            | Entity Type | Notes                                                                                                                                                                                                                                                   |
+|-------------------| --- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Activity goal`   | `Sensor` | Current daily goal as set up in the Whistle app. `Note`: The state is in `minutes` but the Home Assistant UI displays this sensor in `HH:MM:SS`                                                                                                         |
+| `Activity streak` | `Sensor` | Current amount of days in a row pet has hit daily goal. `Note`: The state is in `days` but the Home Assistant UI displays this sensor in `HH:MM:SS`                                                                                                     |
+| `Calories`        | `Sensor` | Number of calories burned today.                                                                                                                                                                                                                        |
+| `Distance`        | `Sensor` | Distance covered in miles today.                                                                                                                                                                                                                        |
+| `Event calories`  | `Sensor` | Calories burned during the most recent event reported. `Note`: As there is no event at midnight, this entity will show as unavailable. As soon as an event is reported by Whistle servers for the current day, this entity will become available again. |
+| `Event distance` | `Sensor` | Amount of miles covered during the latest event. `Note`: As there is no event at midnight, this entity will show as unavailable. As soon as an event is reported by Whistle servers for the current day, this entity will become available again. |
+| `Event duration` | `Sensor` | How long the last event lasted. The state of this entity is in `minutes` but the Home Assistant UI displays this sensor in `HH:MM:SS`. `Note`: As there is no event at midnight, this entity will show as unavailable. As soon as an event is reported by Whistle servers for the current day, this entity will become available again. |
+| `Event end` | `Sensor` | When the event ended as represented in datetime format. `Note`: As there is no event at midnight, this entity will show as unavailable. As soon as an event is reported by Whistle servers for the current day, this entity will become available again. |
+| `Event start` | `Sensor` | When the event started as represented in datetime format. `Note`: As there is no event at midnight, this entity will show as unavailable. As soon as an event is reported by Whistle servers for the current day, this entity will become available again. |
+| `Last event` | `Sensor` | Most recent event reported by Whistle servers. `Note`: As there is no event at midnight, this entity will show as unavailable. As soon as an event is reported by Whistle servers for the current day, this entity will become available again. |
+| `Minutes active` | `Sensor` | Minutes your pet has been active today. `Note`: The state of this sensor is in `minutes` but the Home Assistant UI displays this sensor in `HH:MM:SS` |
+| `Minutes rest` | `Sensor` | Minutes your pet has spent resting today. `Note`: The state of this sensor is in `minutes` but the Home Assistant UI displays this sensor in `HH:MM:SS` |
+| `24H WiFi battery usage` | `Sensor` | `This entity is only available for GPS Whistle devices`. Displays the percent of time, during last 24 hours, that Whistle device used WiFi. |
+| `24H cellular battery usage` | `Sensor` | `This entity is only available for GPS Whistle devices`. Displays the percent of time, during last 24 hours, that Whistle device used cellular connection. |
+| `Battery` | `Sensor` | Current Whistle device battery percentage. |
+| `Battery days left` | `Sensor` | Estimated battery life left. `Note`: This sensor's state is in `days` but the Home Assitant UI displays the sensor in `HH:MM:SS` |
+| `Last check-in` | `Sensor` | Last time whistle device contacted Whistle servers. Represented as datetime. |
+| `Whistle tracker` | `Device Tracker` | `This entity is only available for GPS Whistle devices.` Shows the most recent reported location using predefined places created within the Whistle app. If pet is not located in a predefined Whistle place, the device tracker has a state of `Away`. |
 
-| Attribute | Description |
-| --- | --- |
-| `battery_level` | Current battery charge level in `percent` |
-| `latitude` | Last known latitude coordinate |
-| `longitude` | Last Known longitude coordinate |
-| `gps_accuracy` | GPS uncertainty in `meters` |
-| `battery_status` | Displays if the battery is `on` or `off` |
-| `battery_days_left` | Estimated number of `days` left before battery is empty |
-| `pending_locate` | If locating pet is pending. Can be either `true` or `false` |
-| `activity_streak` | Number of `days` in a row your pet has reached its activity goal |
-| `activity_minutes_active` | Number of `minutes` your pet has been active today |
-| `active_minutes_rest` | Number of minutes your pet has been resting today |
-| `activity_goal` | Current activity goal, in `minutes`, for today as set up from the app |
-| `activity_distance` | Distance covered, in `miles or km` depending on setting within Whistle app, by your pet today |
-| `activity_calories` | Number of calories, in `kcal`, burned by your pet today |
-| `24h_battery_wifi_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used Wi-Fi (also known as Power Save Mode) |
-| `24h_battery_cellular_usage` | Amount of time in the last 24 hours, in `percent`, the Whistle used the cellular network (this occurs when the tracker is not connected to Wi-Fi) |
-| `last_check_in` | Last date and time the Whistle device contacted the Whistle servers |
-
-### Sensor
-A sensor is created for each pet with a `state` that displays the most recent event from the timeline
-
-Available attributes:
-
-| Attribute | Description |
-| --- | --- |
-| `start_time` | The date and time when the event started. Date and time is displayed in the Home Assistant timezone. |
-| `end_time` | The date and time when the event ended. Date and time is displayed in the Home Assistant timezone. |
-| `duration` | The length of the event in `minutes` |
-| `distance` | Distance covered by your pet during this event. Distance is in `miles` or `km` depending on the setting within the Whistle app |
-| `calories` | Calories, in `kcal`, burned by your pet during this event
