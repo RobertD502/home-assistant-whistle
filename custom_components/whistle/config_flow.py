@@ -1,79 +1,110 @@
-"""Config flow for Whistle component"""
-import logging
+""" Config Flow for Whistle integration. """
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from whistleaio.exceptions import WhistleAuthError
 import voluptuous as vol
-from pywhistle import Client
-from homeassistant.helpers import aiohttp_client
+
 from homeassistant import config_entries
-from homeassistant.core import callback
-from homeassistant.const import (
-    CONF_PASSWORD,
-    CONF_USERNAME
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.data_entry_flow import FlowResult
+import homeassistant.helpers.config_validation as cv
+
+from .const import DEFAULT_NAME, DOMAIN
+from .util import async_validate_api, NoPetsError
+
+DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_EMAIL): cv.string,
+        vol.Required(CONF_PASSWORD): cv.string,
+    }
 )
-from .const import DOMAIN
-_LOGGER = logging.getLogger(__name__)
+
 
 class WhistleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle our config flow."""
+    """ Handle a config flow for Whistle integration. """
 
-    VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
+    VERSION = 2
 
-    def __init__(self):
-        """Initialize Whistle configuration flow"""
-        self.schema = vol.Schema({
-            vol.Required(CONF_USERNAME): str,
-            vol.Required(CONF_PASSWORD): str
-        })
+    entry: config_entries.ConfigEntry | None
 
-        self._username = None
-        self._password = None
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
+        """ Handle re-authentication with Whistle. """
 
-    async def async_step_user(self, user_input=None):
-        """Handle a flow start."""
+        self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        return await self.async_step_reauth_confirm()
 
-        if self._async_current_entries():
-            return self.async_abort(reason="already_configured")
+    async def async_step_reauth_confirm(
+            self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """ Confirm re-authentication with Whistle. """
 
-        if not user_input:
-            return self._show_form()
+        errors: dict[str, str] = {}
 
-        self._username = user_input[CONF_USERNAME]
-        self._password = user_input[CONF_PASSWORD]
+        if user_input:
+            email = user_input[CONF_EMAIL]
+            password = user_input[CONF_PASSWORD]
+            try:
+                await async_validate_api(self.hass, email, password)
+            except WhistleAuthError:
+                errors["base"] = "invalid_auth"
+            except ConnectionError:
+                errors["base"] = "cannot_connect"
+            except NoPetsError:
+                errors["base"] = "no_pets"
+            else:
+                assert self.entry is not None
 
-        return await self._async_whistle_login()
+                self.hass.config_entries.async_update_entry(
+                    self.entry,
+                    data={
+                        CONF_EMAIL: email,
+                        CONF_PASSWORD: password,
 
+                    },
+                )
+                await self.hass.config_entries.async_reload(self.entry.entry_id)
+                return self.async_abort(reason="reauth_successful")
+                errors["base"] = "incorrect_email_pass"
 
-    async def _async_whistle_login(self):
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=DATA_SCHEMA,
+            errors=errors,
+        )
 
-        errors = {}
-        websession = aiohttp_client.async_get_clientsession(self.hass)
-        try:
-            client = Client(self._username, self._password, websession)
-            await client.async_init()
+    async def async_step_user(
+            self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """ Handle the initial step. """
 
-        except Exception:
-            _LOGGER.error("Unable to connect to Whistle API: Failed to Log In")
-            errors = {"base": "auth_error"}
+        errors: dict[str, str] = {}
 
-        if errors:
-            return self._show_form(errors=errors)
+        if user_input:
 
-        return await self._async_create_entry()
+            email = user_input[CONF_EMAIL]
+            password = user_input[CONF_PASSWORD]
+            try:
+                await async_validate_api(self.hass, email, password)
+            except WhistleAuthError:
+                errors["base"] = "invalid_auth"
+            except ConnectionError:
+                errors["base"] = "cannot_connect"
+            except NoPetsError:
+                errors["base"] = "no_pets"
+            else:
+                await self.async_set_unique_id(email)
+                self._abort_if_unique_id_configured()
 
-    async def _async_create_entry(self):
-        """Create the config entry."""
-        config_data = {
-            CONF_USERNAME: self._username,
-            CONF_PASSWORD: self._password,
-        }
+                return self.async_create_entry(
+                    title=DEFAULT_NAME,
+                    data={CONF_EMAIL: email, CONF_PASSWORD: password},
+                )
 
-        return self.async_create_entry(title='Whistle', data=config_data)
-
-    @callback
-    def _show_form(self, errors=None):
-        """Show the form to the user."""
         return self.async_show_form(
             step_id="user",
-            data_schema=self.schema,
-            errors=errors if errors else {},
+            data_schema=DATA_SCHEMA,
+            errors=errors,
         )
