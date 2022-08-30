@@ -1,173 +1,1301 @@
-"""Whistle Sensor Platform"""
-import logging
-import aiohttp
-from datetime import timedelta, datetime
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.components.sensor import SensorEntity
+""" Sensor platform for Whistle integration."""
+from __future__ import annotations
+
+from typing import Any
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from whistleaio.model import Pet
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import(
+    LENGTH_MILES,
+    PERCENTAGE,
+    TIME_DAYS,
+    TIME_MINUTES,
+)
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
 from .const import DOMAIN
+from .coordinator import WhistleDataUpdateCoordinator
 
-SCAN_INTERVAL = timedelta(seconds=120)
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """ Set Up Whistle Sensor Entities. """
 
-_LOGGER = logging.getLogger(__name__)
+    coordinator: WhistleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-"""Attributes"""
+    sensors = []
 
-ATTR_START_TIME = "start_time"
-ATTR_END_TIME = "end_time"
-ATTR_DURATION = "duration"
-ATTR_DISTANCE = "distance"
-ATTR_CALORIES = "calories"
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Platform uses config entry setup."""
-    pass
+    for pet_id, pet_data in coordinator.data.pets.items():
+            """ Pet """
+            if pet_data.data['device']:
+                """ Only get 24h usage if GPS device. """
+                if pet_data.data['device']['has_gps']:
+                    sensors.extend((
+                        WifiUsage(coordinator, pet_id),
+                        CellUsage(coordinator, pet_id),
+                    ))
+                sensors.extend((
+                    Battery(coordinator, pet_id),
+                    BatteryDaysLeft(coordinator, pet_id),
+                    MinutesActive(coordinator, pet_id),
+                    MinutesRest(coordinator, pet_id),
+                    Streak(coordinator, pet_id),
+                    ActivityGoal(coordinator, pet_id),
+                    Distance(coordinator, pet_id),
+                    Calories(coordinator, pet_id),
+                    LastCheckIn(coordinator, pet_id),
+                    Event(coordinator, pet_id),
+                    EventStart(coordinator, pet_id),
+                    EventEnd(coordinator, pet_id),
+                    EventDistance(coordinator, pet_id),
+                    EventCalories(coordinator, pet_id),
+                    EventDuration(coordinator, pet_id),
+                ))
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up Whistle event sensor."""
-    whistle = hass.data[DOMAIN]
-    pets = []
-    try:
-        await whistle.async_init()
-        get_pets = await whistle.get_pets()
-    except Exception as e:
-        _LOGGER.error("Failed to get pets from Whistle servers")
-        raise PlatformNotReady from e
+    async_add_entities(sensors)
 
-    for pet in get_pets["pets"]:
-        if pet['device']['has_gps']:
-            pets.append(WhistleEventSensor(pet, whistle))
+class Battery(CoordinatorEntity, SensorEntity):
+    """ Representation of Whistle Device Battery. """
 
-    async_add_entities(pets, True)
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
 
-class WhistleEventSensor(SensorEntity):
-    """Representation of Whistle Event Sensor"""
-
-    def __init__(self, pet, whistle):
-        """ Build WhistleTracker
-            whistle = aiohttp session
-            pet = initially-fetched pet data
-        """
-        self._whistle = whistle
-        self._pet_id = pet['id']
-        self._device_id = pet['device']['serial_number']
-        self._available = False
-        self._pet_update(pet)
-        self._failed_update = False
-
-    def _pet_update(self, pet):
-        self._available = True
-        self._name = pet['name']
-        self._species = pet['profile']['species']
-
-    def _daily_items_update(self, daily_items):
-        """ Whistle events that are of type insight and low_activity don't have a numeric duration, distance, and calories key """ 
-        if daily_items['daily_items'][0]['type'] == "insight":
-            self._event_title = daily_items['daily_items'][0]['title']
-            self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
-            self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
-            self._duration = daily_items['daily_items'][0]['data']['category'].replace('_', ' ')
-            self._distance = 0
-            self._calories = 0
-        elif daily_items['daily_items'][0]['type'] == "low_activity":
-            self._event_title = daily_items['daily_items'][0]['title']
-            self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
-            self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
-            self._duration = daily_items['daily_items'][0]['data']['duration']
-            self._distance = 0
-            self._calories = 0
-        else:
-            self._event_title = daily_items['daily_items'][0]['title']
-            self._start_time = datetime.fromisoformat(daily_items['daily_items'][0]['start_time'].replace('Z', '+00:00')).astimezone()
-            self._end_time = datetime.fromisoformat(daily_items['daily_items'][0]['end_time'].replace('Z', '+00:00')).astimezone()
-            self._duration = daily_items['daily_items'][0]['data']['duration']
-            self._distance = daily_items['daily_items'][0]['data']['distance']
-            self._calories = daily_items['daily_items'][0]['data']['calories']
 
     @property
-    def should_poll(self):
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_battery'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Battery"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
         return True
 
     @property
-    def unique_id(self):
-        """Set ID to serial number of the Whistle Device"""
-        return self._device_id
+    def native_value(self) -> int:
+        """ Return battery percentage. """
+
+        return self.pet_data.data['device']['battery_level']
 
     @property
-    def name(self):
-        """Sensor entity name"""
-        return "whistle_" + self._name + "_event"
+    def native_unit_of_measurement(self) -> str:
+        """ Return percentage as the native unit. """
+
+        return PERCENTAGE
 
     @property
-    def icon(self):
-        """Determine what icon to use"""
-        if self._species == 'dog':
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.BATTERY
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def entity_category(self) -> EntityCategory:
+        """ Set category to diagnostic. """
+
+        return EntityCategory.DIAGNOSTIC
+
+class BatteryDaysLeft(CoordinatorEntity, SensorEntity):
+    """ Representation of estimated battery life left in days. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_data(self) -> dict[str, Any]:
+        """ Handle coordinator device data. """
+
+        return self.coordinator.data.pets[self.pet_id].device
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_battery_days_left'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Battery days left"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:timer-sand'
+
+    @property
+    def native_value(self) -> float:
+        """ Return estimated days left. """
+
+        return self.device_data['device']['battery_stats']['battery_days_left']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return days as the native unit. """
+
+        return TIME_DAYS
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DURATION
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def entity_category(self) -> EntityCategory:
+        """ Set category to diagnostic. """
+
+        return EntityCategory.DIAGNOSTIC
+
+class WifiUsage(CoordinatorEntity, SensorEntity):
+    """ Representation of Whistle Device Battery 24h WiFi usage. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_data(self) -> dict[str, Any]:
+        """ Handle coordinator device data. """
+
+        return self.coordinator.data.pets[self.pet_id].device
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_24h_wifi_usage'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "24H WiFi battery usage"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set entity icon. """
+
+        return 'mdi:wifi'
+
+    @property
+    def native_value(self) -> int:
+        """ Return 24h WiFi battery usage as percentage. """
+
+        return int(round(((float(self.device_data['device']['battery_stats']['prior_usage_minutes']['24h']['power_save_mode']) / 1440) * 100), 0))
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return percentage as the native unit. """
+
+        return PERCENTAGE
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def entity_category(self) -> EntityCategory:
+        """ Set category to diagnostic. """
+
+        return EntityCategory.DIAGNOSTIC
+
+class CellUsage(CoordinatorEntity, SensorEntity):
+    """ Representation of Whistle Device Battery 24h cellular usage. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_data(self) -> dict[str, Any]:
+        """ Handle coordinator device data. """
+
+        return self.coordinator.data.pets[self.pet_id].device
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_24h_cell_usage'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "24H cellular battery usage"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set entity icon. """
+
+        return 'mdi:signal-cellular-outline'
+
+    @property
+    def native_value(self) -> int:
+        """ Return 24h cellular battery usage as percentage. """
+
+        return int(round(((float(self.device_data['device']['battery_stats']['prior_usage_minutes']['24h']['cellular']) / 1440) * 100), 0))
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return percentage as the native unit. """
+
+        return PERCENTAGE
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def entity_category(self) -> EntityCategory:
+        """ Set category to diagnostic. """
+
+        return EntityCategory.DIAGNOSTIC
+
+class MinutesActive(CoordinatorEntity, SensorEntity):
+    """ Representation of today's active minutes. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_minutes_active'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Minutes active"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:run-fast'
+
+    @property
+    def native_value(self) -> int:
+        """ Return today's active minutes. """
+
+        return self.pet_data.data['activity_summary']['current_minutes_active']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return minutes as the native unit. """
+
+        return TIME_MINUTES
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DURATION
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.TOTAL_INCREASING
+
+class MinutesRest(CoordinatorEntity, SensorEntity):
+    """ Representation of today's resting minutes. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_minutes_rest'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Minutes rest"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:bed-clock'
+
+    @property
+    def native_value(self) -> int:
+        """ Return today's rest minutes. """
+
+        return self.pet_data.data['activity_summary']['current_minutes_rest']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return minutes as the native unit. """
+
+        return TIME_MINUTES
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DURATION
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.TOTAL_INCREASING
+
+class Streak(CoordinatorEntity, SensorEntity):
+    """ Representation of activity streak. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_activity_streak'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Activity streak"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:chart-timeline-variant-shimmer'
+
+    @property
+    def native_value(self) -> int:
+        """ Return current activity streak. """
+
+        return self.pet_data.data['activity_summary']['current_streak']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return days as the native unit. """
+
+        return TIME_DAYS
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DURATION
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.TOTAL_INCREASING
+
+class ActivityGoal(CoordinatorEntity, SensorEntity):
+    """ Representation of daily activity goal in minutes. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_activity_goal'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Activity goal"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:flag-checkered'
+
+    @property
+    def native_value(self) -> int:
+        """ Return today's active minutes. """
+
+        return self.pet_data.data['activity_summary']['current_activity_goal']['minutes']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return minutes as the native unit. """
+
+        return TIME_MINUTES
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DURATION
+
+class Distance(CoordinatorEntity, SensorEntity):
+    """ Representation of today's distance in miles. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_distance'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Distance"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:map-marker-distance'
+
+    @property
+    def native_value(self) -> float:
+        """ Return today's distance in miles. """
+
+        return self.pet_data.dailies['dailies'][00]['distance']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return miles as the native unit. """
+
+        return LENGTH_MILES
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.TOTAL_INCREASING
+
+class Calories(CoordinatorEntity, SensorEntity):
+    """ Representation of today's calories. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_calories'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Calories"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:fire'
+
+    @property
+    def native_value(self) -> int:
+        """ Return today's calories burned. """
+
+        return int(self.pet_data.dailies['dailies'][00]['calories'])
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.TOTAL_INCREASING
+
+class LastCheckIn(CoordinatorEntity, SensorEntity):
+    """ Representation of last time device sent data to Whistle servers. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_last_check_in'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Last check-in"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:server-network'
+
+    @property
+    def native_value(self) -> datetime:
+        """ Return last check-in as datetime. """
+        current_tz = self.pet_data.data['profile']['time_zone_name']
+        return datetime.fromisoformat(self.pet_data.data['device']['last_check_in'].replace(' ' + current_tz, '')).replace(tzinfo=ZoneInfo(current_tz)).astimezone()
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.TIMESTAMP
+
+    @property
+    def entity_category(self) -> EntityCategory:
+        """ Set category to diagnostic. """
+
+        return EntityCategory.DIAGNOSTIC
+
+class Event(CoordinatorEntity, SensorEntity):
+    """ Representation of latest event. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_event'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Latest event"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        if self.pet_data.data['profile']['species'] == 'dog':
             return 'mdi:dog'
-        if self._species == 'cat':
+        if self.pet_data.data['profile']['species'] == 'cat':
             return 'mdi:cat'
 
     @property
-    def state(self):
-        return self._event_title
+    def native_value(self) -> str:
+        """ Return latest event. """
+
+        return self.pet_data.events['daily_items'][00]['title']
 
     @property
-    def start_time(self):
-        return self._start_time
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.events['daily_items']:
+            return True
+        else:
+            return False
+
+class EventStart(CoordinatorEntity, SensorEntity):
+    """ Representation of when last event started. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
 
     @property
-    def end_time(self):
-        return self._end_time
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
 
     @property
-    def duration(self):
-        return self._duration
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
 
-    @property
-    def distance(self):
-        return self._distance
-
-    @property
-    def calories(self):
-        return self._calories
-
-    @property
-    def available(self):
-        return self._available
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return attributes."""
         return {
-            ATTR_START_TIME: self.start_time,
-            ATTR_END_TIME: self.end_time,
-            ATTR_DURATION: self.duration,
-            ATTR_DISTANCE: self.distance,
-            ATTR_CALORIES: self.calories,
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
         }
 
-    async def async_update(self):
-        """ Retrieve latest data from Whistle Servers """
-        _LOGGER.info('Updating Whistle event data')
-        try:
-            await self._whistle.async_init()
-            dailies = await self._whistle.get_dailies(self._pet_id)
-            daily_items = await self._whistle.get_dailies_daily_items(self._pet_id, dailies['dailies'][0]['day_number'])
-        except Exception as e:
-            if self._failed_update:
-                _LOGGER.warning(
-                    "Failed to update event data for device '%s' from Whistle servers",
-                    self.name,
-                )
-                self._available = False
-                self.async_write_ha_state()
-                return
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
 
-            _LOGGER.debug("First failed event data update for device '%s'", self.name)
-            self._failed_update = True
-            return
-        if len(daily_items['daily_items']) > 0:
-            self._daily_items_update(daily_items)
-            self._available = True
-            self._failed_update = False
+        return str(self.pet_data.id) + '_event_start'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Event start"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:timer-play-outline'
+
+    @property
+    def native_value(self) -> datetime:
+        """ Return event start time. """
+
+        return datetime.fromisoformat(self.pet_data.events['daily_items'][00]['start_time'].replace('Z', '+00:00')).astimezone()
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.TIMESTAMP
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.events['daily_items']:
+            return True
         else:
-            _LOGGER.info("No event found to report. This occurs at midnight. '%s' sensor will become available once an event has been reported to the Whistle servers.", self.name)
-            self._available = False
+            return False
+
+class EventEnd(CoordinatorEntity, SensorEntity):
+    """ Representation of when last event ended. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_event_end'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Event end"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:timer-pause-outline'
+
+    @property
+    def native_value(self) -> datetime:
+        """ Return event end time. """
+
+        return datetime.fromisoformat(self.pet_data.events['daily_items'][00]['end_time'].replace('Z', '+00:00')).astimezone()
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.TIMESTAMP
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.events['daily_items']:
+            return True
+        else:
+            return False
+
+class EventDistance(CoordinatorEntity, SensorEntity):
+    """ Representation of distance covered during latest event. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_event_distance'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Event distance"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:map-marker-distance'
+
+    @property
+    def native_value(self) -> float:
+        """ Return event distance in miles. """
+
+        return self.pet_data.events['daily_items'][00]['data']['distance']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return miles as the native unit. """
+
+        return LENGTH_MILES
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.events['daily_items']:
+            return True
+        else:
+            return False
+
+class EventCalories(CoordinatorEntity, SensorEntity):
+    """ Representation of calories burned during latest event. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_event_calories'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Event calories"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:fire'
+
+    @property
+    def native_value(self) -> int:
+        """ Return today's calories burned. """
+
+        return self.pet_data.events['daily_items'][00]['data']['calories']
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.events['daily_items']:
+            return True
+        else:
+            return False
+
+class EventDuration(CoordinatorEntity, SensorEntity):
+    """ Representation of latest event duration in minutes. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_event_duration'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Event duration"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:timer-outline'
+
+    @property
+    def native_value(self) -> float:
+        """ Return latest event duration in minutes. """
+
+        return self.pet_data.events['daily_items'][00]['data']['duration']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return minutes as the native unit. """
+
+        return TIME_MINUTES
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DURATION
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.events['daily_items']:
+            return True
+        else:
+            return False
