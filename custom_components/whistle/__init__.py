@@ -1,46 +1,62 @@
-"""Whistle Component Setup"""
-import asyncio
-import logging
-import voluptuous as vol
-from pywhistle import Client
+""" Whistle Component """
+from __future__ import annotations
 
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant import config_entries
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.const import (
-    CONF_PASSWORD,
-    CONF_USERNAME
-)
-from .const import DOMAIN
+from whistleaio.exceptions import WhistleAuthError
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
+
+from .const import DOMAIN, LOGGER, PLATFORMS
+from .coordinator import WhistleDataUpdateCoordinator
+from .util import async_validate_api, NoPetsError
 
 
-_LOGGER = logging.getLogger(__name__)
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """ Set up Whistle from a config entry. """
 
+    coordinator = WhistleDataUpdateCoordinator(hass, entry)
+    await coordinator.async_config_entry_first_refresh()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-def setup(hass, config):
-    """Setup of the component"""
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 
-async def async_setup_entry(hass, config_entry):
-    """Set up Whistle integration from a config entry."""
-    username = config_entry.data.get(CONF_USERNAME)
-    password = config_entry.data.get(CONF_PASSWORD)
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """ Unload Whistle config entry. """
 
-    _LOGGER.info("Initializing the Whistle API")
-    websession = aiohttp_client.async_get_clientsession(hass)
-    whistle = Client(username, password, websession)
-    _LOGGER.info("Connected to Whistle API")
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        del hass.data[DOMAIN][entry.entry_id]
+        if not hass.data[DOMAIN]:
+            del hass.data[DOMAIN]
+    return unload_ok
 
-    hass.data[DOMAIN] = whistle
 
-    hass.async_add_job(
-        hass.config_entries.async_forward_entry_setup(config_entry, "device_tracker")
-    )
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """ Migrate old entry. """
 
-    hass.async_add_job(
-        hass.config_entries.async_forward_entry_setup(config_entry, "sensor")
-    )
+    if entry.version == 1:
+        email = entry.data[CONF_USERNAME]
+        password = entry.data[CONF_PASSWORD]
+
+        try:
+            await async_validate_api(hass, email, password)
+        except (WhistleAuthError, ConnectionError, NoPetsError):
+            return False
+
+        entry.version = 2
+
+        LOGGER.debug(f'Migrate Whistle config entry unique id to {email}')
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                CONF_EMAIL: email,
+                CONF_PASSWORD: password,
+
+            },
+            unique_id=email,
+        )
 
     return True
