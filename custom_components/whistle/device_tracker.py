@@ -5,7 +5,7 @@ from typing import Any
 
 from whistleaio.model import Pet
 
-from homeassistant.components.device_tracker.const import SOURCE_TYPE_GPS
+from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -100,10 +100,10 @@ class WhistleTracker(CoordinatorEntity, TrackerEntity):
             return 'mdi:cat'
 
     @property
-    def source_type(self) -> str:
+    def source_type(self) -> SourceType:
         """ Return GPS as the source. """
 
-        return SOURCE_TYPE_GPS
+        return SourceType.GPS
 
     @property
     def latitude(self) -> str:
