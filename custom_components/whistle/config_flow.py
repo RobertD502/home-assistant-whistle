@@ -9,10 +9,18 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 
-from .const import DEFAULT_NAME, DOMAIN
+from .const import (
+    CONF_ZONE_METHOD,
+    DEFAULT_NAME,
+    DEFAULT_ZONE_METHOD,
+    DOMAIN,
+    ZONE_METHODS,
+)
+
 from .util import async_validate_api, NoPetsError
 
 DATA_SCHEMA = vol.Schema(
@@ -26,9 +34,17 @@ DATA_SCHEMA = vol.Schema(
 class WhistleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """ Handle a config flow for Whistle integration. """
 
-    VERSION = 2
+    VERSION = 3
 
     entry: config_entries.ConfigEntry | None
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> WhistleOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return WhistleOptionsFlowHandler(config_entry)
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """ Handle re-authentication with Whistle. """
@@ -101,6 +117,7 @@ class WhistleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=DEFAULT_NAME,
                     data={CONF_EMAIL: email, CONF_PASSWORD: password},
+                    options={CONF_ZONE_METHOD: DEFAULT_ZONE_METHOD},
                 )
 
         return self.async_show_form(
@@ -108,3 +125,26 @@ class WhistleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=DATA_SCHEMA,
             errors=errors,
         )
+
+class WhistleOptionsFlowHandler(config_entries.OptionsFlow):
+    """ Handle Whistle zone options. """
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """ Manage options. """
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        options = {
+            vol.Optional(
+                CONF_ZONE_METHOD,
+                default=self.config_entry.options.get(
+                    CONF_ZONE_METHOD, DEFAULT_ZONE_METHOD
+                ),
+            ): vol.In(ZONE_METHODS)
+        }
+
+        return self.async_show_form(step_id="init", data_schema=vol.Schema(options))
