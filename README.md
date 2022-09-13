@@ -58,5 +58,15 @@ A device is created for each pet. See below for the entities available and speci
 | `Battery` | `Sensor` | Current Whistle device battery percentage. |
 | `Battery days left` | `Sensor` | Estimated battery life left. `Note`: This sensor's state is in `days` but the Home Assitant UI displays the sensor in `HH:MM:SS` |
 | `Last check-in` | `Sensor` | Last time whistle device contacted Whistle servers. Represented as datetime. |
-| `Whistle tracker` | `Device Tracker` | `This entity is only available for GPS Whistle devices.` Shows the most recent reported location using predefined places created within the Whistle app. If pet is not located in a predefined Whistle place, the device tracker has a state of `Away`. |
+| `Whistle tracker` | `Device Tracker` | `This entity is only available for GPS Whistle devices.` By default, zones defined within the Whistle app are used. `See Device Tracker Zones below for configuration options`. If using zones created within the Whistle app: Shows the most recent reported location using predefined places created within the Whistle app. If pet is not located in a predefined Whistle place, the device tracker has a state of `Away`. If using Home Assistant zones, location name will depend on zones created within Home Assistant by the user. |
+
+## Device Tracker Zones
+This section only applies to whistle devices that have GPS capabilities
+
+**By default, zones created within the Whistle app are used.**
+If you want to use Home Assistant zones, click on the configure button and select the option `Home Assistant`(see images below).
+
+<img width="325" alt="image" src="https://user-images.githubusercontent.com/52541649/190007811-3b246f51-5d9e-4a43-8403-0f97fc22c331.png">
+<img width="397" alt="image" src="https://user-images.githubusercontent.com/52541649/190008206-e6172e70-e3b1-472a-9ca7-0d210dd59d95.png">
+
 
