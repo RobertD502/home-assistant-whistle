@@ -150,7 +150,9 @@ class WhistleTracker(CoordinatorEntity, TrackerEntity):
         """
         
         if self.zone_method == DEFAULT_ZONE_METHOD:
-            if self.pet_data.data['last_location']['place']['id']:
+            if self.pet_data.data['last_location']['place']['status'] == 'outside_geofence_range':
+                return "Away"
+            elif self.pet_data.data['last_location']['place']['id']:
                 location_id = self.pet_data.data['last_location']['place']['id']
                 return self.location_dict.get(location_id)
             else:
