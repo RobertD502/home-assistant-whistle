@@ -32,7 +32,7 @@
     "step": {
       "init": {
         "data": {
-          "zone_method": "Use zones defined by"
+          "zone_method": "Use zones defined by:"
         }
       }
     }
