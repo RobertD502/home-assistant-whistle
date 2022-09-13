@@ -27,5 +27,14 @@
       "already_configured": "Whistle account is already configured",
       "reauth_successful": "Re-authentication was successful"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "zone_method": "Use zones defined by"
+        }
+      }
+    }
   }
 }
