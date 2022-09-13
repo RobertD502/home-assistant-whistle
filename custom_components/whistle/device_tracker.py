@@ -106,16 +106,16 @@ class WhistleTracker(CoordinatorEntity, TrackerEntity):
         return SourceType.GPS
 
     @property
-    def latitude(self) -> str:
+    def latitude(self) -> float:
         """ Return most recent latitude. """
 
-        return str(self.pet_data.data['last_location']['latitude'])
+        return self.pet_data.data['last_location']['latitude']
 
     @property
-    def longitude(self) -> str:
+    def longitude(self) -> float:
         """ Return most recent longitude. """
 
-        return str(self.pet_data.data['last_location']['longitude'])
+        return self.pet_data.data['last_location']['longitude']
 
     @property
     def battery_level(self) -> int:
