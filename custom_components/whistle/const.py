@@ -26,3 +26,10 @@ WHISTLE_ERRORS = (
     ClientConnectionError,
     WhistleAuthError,
 )
+
+CONF_ZONE_METHOD = "zone_method"
+DEFAULT_ZONE_METHOD = "Whistle"
+ZONE_METHODS = ["Whistle", "Home Assistant"]
+
+UPDATE_LISTENER = "update_listener"
+WHISTLE_COORDINATOR = "whistle_coordinator"
