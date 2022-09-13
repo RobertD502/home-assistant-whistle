@@ -12,7 +12,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import (
+    CONF_ZONE_METHOD,
+    DEFAULT_ZONE_METHOD,
+    DOMAIN,
+    WHISTLE_COORDINATOR,
+)
 from .coordinator import WhistleDataUpdateCoordinator
 
 async def async_setup_entry(
@@ -20,7 +25,7 @@ async def async_setup_entry(
 ) -> None:
     """ Set Up Whistle Device Tracker Entities. """
 
-    coordinator: WhistleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: WhistleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][WHISTLE_COORDINATOR]
 
     device_trackers = []
 
@@ -30,17 +35,23 @@ async def async_setup_entry(
             """ Device Trackers """
             if pet_data.data['device'] and pet_data.data['device']['has_gps']:
                 device_trackers.extend((
-                        WhistleTracker(coordinator, pet_id),
+                        WhistleTracker(coordinator, pet_id, entry),
                     ))
     async_add_entities(device_trackers)
 
 class WhistleTracker(CoordinatorEntity, TrackerEntity):
     """ Representation of Whistle GPS Tracker. """
 
-    def __init__(self, coordinator, pet_id):
+    def __init__(self, coordinator, pet_id, entry):
         super().__init__(coordinator)
         self.pet_id = pet_id
+        self.entry = entry
 
+    @property
+    def zone_method(self):
+        """ Return the zone method. """
+        
+        return self.entry.options[CONF_ZONE_METHOD]
 
     @property
     def pet_data(self) -> Pet:
@@ -130,14 +141,19 @@ class WhistleTracker(CoordinatorEntity, TrackerEntity):
         return int(self.pet_data.data['last_location']['uncertainty_meters'])
 
     @property
-    def location_name(self) -> str:
-        """Returns the Whistle location, as defined in the app.
-        If the tracker is not in a pre-defined location, location
-        of Away is returned.
+    def location_name(self) -> str | None:
+        """Returns the Whistle location, as defined in the app,
+        if zone method is set to Whistle.If the tracker is not in
+        a pre-defined location, location of Away is returned.
+        If zone method is set to Home Assistant, Home Assistant
+        zones will be used instead.
         """
-
-        if self.pet_data.data['last_location']['place']['id']:
-            location_id = self.pet_data.data['last_location']['place']['id']
-            return self.location_dict.get(location_id)
+        
+        if self.zone_method == DEFAULT_ZONE_METHOD:
+            if self.pet_data.data['last_location']['place']['id']:
+                location_id = self.pet_data.data['last_location']['place']['id']
+                return self.location_dict.get(location_id)
+            else:
+                return "Away"
         else:
-            return "Away"
+            return None
