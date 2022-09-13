@@ -27,5 +27,14 @@
             }
         },
         "title": "Whistle"
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "zone_method": "Use zones defined by:"
+                }
+            }
+        }
     }
 }
