@@ -27,7 +27,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, WHISTLE_COORDINATOR
 from .coordinator import WhistleDataUpdateCoordinator
 
 async def async_setup_entry(
@@ -35,7 +35,7 @@ async def async_setup_entry(
 ) -> None:
     """ Set Up Whistle Sensor Entities. """
 
-    coordinator: WhistleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: WhistleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][WHISTLE_COORDINATOR]
 
     sensors = []
 
