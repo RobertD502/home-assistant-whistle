@@ -804,6 +804,12 @@ class Calories(CoordinatorEntity, SensorEntity):
         return int(self.pet_data.dailies['dailies'][00]['calories'])
 
     @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return calories as the native unit. """
+
+        return 'cal'
+
+    @property
     def state_class(self) -> SensorStateClass:
         """ Return the type of state class. """
 
@@ -1213,6 +1219,18 @@ class EventCalories(CoordinatorEntity, SensorEntity):
         """ Return today's calories burned. """
 
         return self.pet_data.events['daily_items'][00]['data']['calories']
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """ Return calories as the native unit. """
+
+        return 'cal'
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        """ Return the type of state class. """
+
+        return SensorStateClass.TOTAL
 
     @property
     def available(self) -> bool:
