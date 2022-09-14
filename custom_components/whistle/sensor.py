@@ -1147,7 +1147,10 @@ class EventDistance(CoordinatorEntity, SensorEntity):
     def native_value(self) -> float:
         """ Return event distance in miles. """
 
-        return self.pet_data.events['daily_items'][00]['data']['distance']
+        if 'distance' in self.pet_data.events['daily_items'][00]['data']:
+            return self.pet_data.events['daily_items'][00]['data']['distance']
+        else:
+            return 0.0
 
     @property
     def native_unit_of_measurement(self) -> str:
@@ -1218,7 +1221,10 @@ class EventCalories(CoordinatorEntity, SensorEntity):
     def native_value(self) -> int:
         """ Return today's calories burned. """
 
-        return self.pet_data.events['daily_items'][00]['data']['calories']
+        if 'calories' in self.pet_data.events['daily_items'][00]['data']:
+            return self.pet_data.events['daily_items'][00]['data']['calories']
+        else:
+            return 0
 
     @property
     def native_unit_of_measurement(self) -> str:
