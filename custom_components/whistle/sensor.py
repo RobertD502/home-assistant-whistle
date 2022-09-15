@@ -1301,7 +1301,10 @@ class EventDuration(CoordinatorEntity, SensorEntity):
     def native_value(self) -> float:
         """ Return latest event duration in minutes. """
 
-        return self.pet_data.events['daily_items'][00]['data']['duration']
+        if 'duration' in self.pet_data.events['daily_items'][00]['data']:
+            return self.pet_data.events['daily_items'][00]['data']['duration']
+        else:
+            return 0.0
 
     @property
     def native_unit_of_measurement(self) -> str:
