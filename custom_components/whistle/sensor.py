@@ -16,10 +16,10 @@ from homeassistant.components.sensor import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import(
-    LENGTH_MILES,
     PERCENTAGE,
     TIME_DAYS,
     TIME_MINUTES,
+    UnitOfLength,
 )
 
 from homeassistant.core import HomeAssistant
@@ -736,10 +736,10 @@ class Distance(CoordinatorEntity, SensorEntity):
         return self.pet_data.dailies['dailies'][00]['distance']
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfLength:
         """ Return miles as the native unit. """
 
-        return LENGTH_MILES
+        return UnitOfLength.MILES
 
     @property
     def state_class(self) -> SensorStateClass:
@@ -1153,10 +1153,10 @@ class EventDistance(CoordinatorEntity, SensorEntity):
             return 0.0
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfLength:
         """ Return miles as the native unit. """
 
-        return LENGTH_MILES
+        return UnitOfLength.MILES
 
     @property
     def available(self) -> bool:
