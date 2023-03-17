@@ -535,7 +535,7 @@ class MinutesRest(CoordinatorEntity, SensorEntity):
     def state_class(self) -> SensorStateClass:
         """ Return the type of state class. """
 
-        return SensorStateClass.TOTAL_INCREASING
+        return SensorStateClass.TOTAL
 
 class Streak(CoordinatorEntity, SensorEntity):
     """ Representation of activity streak. """
