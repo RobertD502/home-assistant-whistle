@@ -1,13 +1,13 @@
 {
   "domain": "whistle",
   "name": "Whistle",
-  "version": "0.1.5",
+  "codeowners": ["@RobertD502"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/RobertD502/home-assistant-whistle/blob/main/README.md",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "documentation": "https://github.com/RobertD502/home-assistant-whistle/blob/main/README.md",
   "issue_tracker": "https://github.com/RobertD502/home-assistant-whistle/issues",
-  "config_flow": true,
   "requirements": ["whistleaio==0.1.0", "strenum==0.4.8"],
-  "dependencies": [],
-  "codeowners": ["@RobertD502"]
+  "version": "0.1.6",  
 }
