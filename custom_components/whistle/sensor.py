@@ -65,6 +65,12 @@ async def async_setup_entry(
                     EventDistance(coordinator, pet_id),
                     EventCalories(coordinator, pet_id),
                     EventDuration(coordinator, pet_id),
+                    HealthScratching(coordinator, pet_id),
+                    HealthLicking(coordinator, pet_id),
+                    HealthDrinking(coordinator, pet_id),
+                    HealthSleeping(coordinator, pet_id),
+                    HealthEating(coordinator, pet_id),
+                    HealthWellnessIdx(coordinator, pet_id)
                 ))
 
     async_add_entities(sensors)
@@ -1323,6 +1329,499 @@ class EventDuration(CoordinatorEntity, SensorEntity):
         """ Only return True if an event exists for today. """
 
         if self.pet_data.events['daily_items']:
+            return True
+        else:
+            return False
+
+
+class HealthScratching(CoordinatorEntity, SensorEntity):
+    """ Representation of latest scratching metric. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_health_scratching'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Scratching"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:paw'
+
+    @property
+    def native_value(self) -> str:
+        """ Return latest grade. """
+
+        formatted_string = self.pet_data.health['scratching']['status'].replace('_', ' ').capitalize()
+        return formatted_string
+
+    @property
+    def scratching_duration(self) -> int:
+        """Return latest scratching time metric."""
+
+        return self.pet_data.health['scratching']['metrics'][0]['value']
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return extra attributes."""
+
+        return {
+            'duration': f'{self.scratching_duration}s'
+        }
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.health['scratching']:
+            return True
+        else:
+            return False
+
+
+class HealthLicking(CoordinatorEntity, SensorEntity):
+    """ Representation of latest licking metric. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_health_licking'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Licking"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:emoticon-tongue-outline'
+
+    @property
+    def native_value(self) -> str:
+        """ Return latest grade. """
+
+        formatted_string = self.pet_data.health['licking']['status'].replace('_', ' ').capitalize()
+        return formatted_string
+
+    @property
+    def licking_duration(self) -> int:
+        """Return latest licking time metric."""
+
+        return self.pet_data.health['licking']['metrics'][0]['value']
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra attributes."""
+
+        return {
+            'duration': f'{self.licking_duration}s'
+        }
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.health['licking']:
+            return True
+        else:
+            return False
+
+
+class HealthDrinking(CoordinatorEntity, SensorEntity):
+    """ Representation of latest drinking metric. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_health_drinking'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Drinking"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:cup'
+
+    @property
+    def native_value(self) -> str:
+        """ Return latest grade. """
+
+        formatted_string = self.pet_data.health['drinking']['status'].replace('_', ' ').capitalize()
+        return formatted_string
+
+    @property
+    def drinking_duration(self) -> int:
+        """Return latest drinking time metric."""
+
+        return self.pet_data.health['drinking']['metrics'][0]['value']
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra attributes."""
+
+        return {
+            'duration': f'{self.drinking_duration}s'
+        }
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.health['drinking']:
+            return True
+        else:
+            return False
+
+
+class HealthSleeping(CoordinatorEntity, SensorEntity):
+    """ Representation of latest sleeping metric. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_health_sleeping'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Sleeping"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:sleep'
+
+    @property
+    def native_value(self) -> str:
+        """ Return latest grade. """
+
+        formatted_string = self.pet_data.health['sleeping']['status'].replace('_', ' ').capitalize()
+        return formatted_string
+
+    @property
+    def sleeping_duration(self) -> int:
+        """Return latest sleeping duration metric."""
+
+        return self.pet_data.health['sleeping']['metrics'][0]['value']
+
+    @property
+    def sleeping_disruptions(self) -> int:
+        """Return latest sleeping disruptions metric."""
+
+        return self.pet_data.health['sleeping']['metrics'][1]['value']
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra attributes."""
+
+        return {
+            'duration': f'{self.sleeping_duration}s',
+            'disruptions': self.sleeping_disruptions
+        }
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.health['sleeping']:
+            return True
+        else:
+            return False
+
+
+class HealthEating(CoordinatorEntity, SensorEntity):
+    """ Representation of latest eating metric. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_health_eating'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Eating"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:food-drumstick'
+
+    @property
+    def native_value(self) -> str:
+        """ Return latest grade. """
+
+        formatted_string = self.pet_data.health['eating']['status'].replace('_', ' ').capitalize()
+        return formatted_string
+
+    @property
+    def eating_duration(self) -> int:
+        """Return latest eating duration metric."""
+
+        return self.pet_data.health['eating']['metrics'][0]['value']
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra attributes."""
+
+        return {
+            'duration': f'{self.eating_duration}s'
+        }
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.health['eating']:
+            return True
+        else:
+            return False
+
+
+class HealthWellnessIdx(CoordinatorEntity, SensorEntity):
+    """ Representation of latest health wellness index. """
+
+    def __init__(self, coordinator, pet_id):
+        super().__init__(coordinator)
+        self.pet_id = pet_id
+
+
+    @property
+    def pet_data(self) -> Pet:
+        """ Handle coordinator pet data. """
+
+        return self.coordinator.data.pets[self.pet_id]
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """ Return device registry information for this entity. """
+
+        return {
+            "identifiers": {(DOMAIN, self.pet_data.id)},
+            "name": self.pet_data.data['name'],
+            "manufacturer": "Whistle",
+            "model": self.pet_data.data['device']['model_id'],
+            "configuration_url": "https://www.whistle.com/",
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """ Sets unique ID for this entity. """
+
+        return str(self.pet_data.id) + '_health_wellness'
+
+    @property
+    def name(self) -> str:
+        """ Return name of the entity. """
+
+        return "Wellness index"
+
+    @property
+    def has_entity_name(self) -> bool:
+        """ Indicate that entity has name defined. """
+
+        return True
+
+    @property
+    def icon(self) -> str:
+        """ Set icon for entity. """
+
+        return 'mdi:heart'
+
+    @property
+    def native_value(self) -> str:
+        """ Return latest grade. """
+
+        formatted_string = self.pet_data.health['wellness_index']['status'].replace('_', ' ').capitalize()
+        return formatted_string
+
+    @property
+    def wellness_score(self) -> int:
+        """Return latest wellness index score."""
+
+        return self.pet_data.health['wellness_index']['metrics'][0]['value']
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra attributes."""
+
+        return {
+            'score': self.wellness_score
+        }
+
+    @property
+    def available(self) -> bool:
+        """ Only return True if an event exists for today. """
+
+        if self.pet_data.health['wellness_index']:
             return True
         else:
             return False
