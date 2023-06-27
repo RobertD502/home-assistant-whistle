@@ -65,6 +65,12 @@ A device is created for each pet. See below for the entities available and speci
 | `Battery days left` | `Sensor` | Estimated battery life left. `Note`: This sensor's state is in `days` but the Home Assitant UI displays the sensor in `HH:MM:SS` |
 | `Last check-in` | `Sensor` | Last time whistle device contacted Whistle servers. Represented as datetime. |
 | `Whistle tracker` | `Device Tracker` | `This entity is only available for GPS Whistle devices.` By default, zones defined within the Whistle app are used. `See Device Tracker Zones below for configuration options`. If using zones created within the Whistle app: Shows the most recent reported location using predefined places created within the Whistle app. If pet is not located in a predefined Whistle place, the device tracker has a state of `Away`. If using Home Assistant zones, location name will depend on zones created within Home Assistant by the user. |
+| `Scratching` | `Sensor` | Scratching rating given by Whistle. Duration (seconds) is presented as an attribute. |
+| `Licking` | `Sensor` | Licking rating given by Whistle. Duration (seconds) is presented as an attribute. |
+| `Drinking` | `Sensor` | Drinking rating given by Whistle. Duration (seconds) is presented as an attribute. |
+| `Sleeping` | `Sensor` | Sleeping rating given by Whistle. Duration (seconds) and number of sleep disruptions are presented as attributes. |
+| `Eating` | `Sensor` | Eating rating given by Whistle. Duration (seconds) is presented as an attribute. |
+| `Wellness index` | `Sensor` | Wellness index rating given by Whistle. Score is presented as an attribute. |
 
 ## Device Tracker Zones
 This section only applies to whistle devices that have GPS capabilities
