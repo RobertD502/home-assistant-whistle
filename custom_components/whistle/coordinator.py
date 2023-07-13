@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from whistleaio import WhistleClient
-from whistleaio.exceptions import WhistleAuthError
+from whistleaio.exceptions import WhistleAuthError, WhistleError
 from whistleaio.model import WhistleData
 
 
@@ -45,8 +45,10 @@ class WhistleDataUpdateCoordinator(DataUpdateCoordinator):
             data = await self.client.get_whistle_data()
         except WhistleAuthError as error:
             raise ConfigEntryAuthFailed from error
+        except WhistleError as error:
+            raise UpdateFailed(error) from error
         except Exception as error:
-            raise UpdateFailed from error
+            raise UpdateFailed(error) from error
         if not data.pets:
             raise UpdateFailed("No Pets found")
         return data
