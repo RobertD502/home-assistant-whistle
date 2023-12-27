@@ -17,9 +17,8 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import(
     PERCENTAGE,
-    TIME_DAYS,
-    TIME_MINUTES,
     UnitOfLength,
+    UnitOfTime,
 )
 
 from homeassistant.core import HomeAssistant
@@ -212,10 +211,10 @@ class BatteryDaysLeft(CoordinatorEntity, SensorEntity):
         return self.device_data['device']['battery_stats']['battery_days_left']
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfTime:
         """ Return days as the native unit. """
 
-        return TIME_DAYS
+        return UnitOfTime.DAYS
 
     @property
     def device_class(self) -> SensorDeviceClass:
@@ -452,10 +451,10 @@ class MinutesActive(CoordinatorEntity, SensorEntity):
         return self.pet_data.data['activity_summary']['current_minutes_active']
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfTime:
         """ Return minutes as the native unit. """
 
-        return TIME_MINUTES
+        return UnitOfTime.MINUTES
 
     @property
     def device_class(self) -> SensorDeviceClass:
@@ -526,10 +525,10 @@ class MinutesRest(CoordinatorEntity, SensorEntity):
         return self.pet_data.data['activity_summary']['current_minutes_rest']
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfTime:
         """ Return minutes as the native unit. """
 
-        return TIME_MINUTES
+        return UnitOfTime.MINUTES
 
     @property
     def device_class(self) -> SensorDeviceClass:
@@ -600,10 +599,10 @@ class Streak(CoordinatorEntity, SensorEntity):
         return self.pet_data.data['activity_summary']['current_streak']
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfTime:
         """ Return days as the native unit. """
 
-        return TIME_DAYS
+        return UnitOfTime.DAYS
 
     @property
     def device_class(self) -> SensorDeviceClass:
@@ -674,10 +673,10 @@ class ActivityGoal(CoordinatorEntity, SensorEntity):
         return self.pet_data.data['activity_summary']['current_activity_goal']['minutes']
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfTime:
         """ Return minutes as the native unit. """
 
-        return TIME_MINUTES
+        return UnitOfTime.MINUTES
 
     @property
     def device_class(self) -> SensorDeviceClass:
@@ -1313,10 +1312,10 @@ class EventDuration(CoordinatorEntity, SensorEntity):
             return 0.0
 
     @property
-    def native_unit_of_measurement(self) -> str:
+    def native_unit_of_measurement(self) -> UnitOfTime:
         """ Return minutes as the native unit. """
 
-        return TIME_MINUTES
+        return UnitOfTime.MINUTES
 
     @property
     def device_class(self) -> SensorDeviceClass:
