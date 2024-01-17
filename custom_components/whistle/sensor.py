@@ -747,6 +747,12 @@ class Distance(CoordinatorEntity, SensorEntity):
         return UnitOfLength.MILES
 
     @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DISTANCE
+
+    @property
     def state_class(self) -> SensorStateClass:
         """ Return the type of state class. """
 
@@ -1162,6 +1168,12 @@ class EventDistance(CoordinatorEntity, SensorEntity):
         """ Return miles as the native unit. """
 
         return UnitOfLength.MILES
+
+    @property
+    def device_class(self) -> SensorDeviceClass:
+        """ Return entity device class. """
+
+        return SensorDeviceClass.DISTANCE
 
     @property
     def available(self) -> bool:
