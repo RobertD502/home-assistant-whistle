@@ -1,6 +1,10 @@
 # Whistle Home Assistant Integration
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs) ![GitHub manifest version (path)](https://img.shields.io/github/manifest-json/v/RobertD502/home-assistant-whistle?filename=custom_components%2Fwhistle%2Fmanifest.json)
 
+## ⚠️ IMPORTANT NOTICE - Platform Decommission
+
+**The Whistle platform will be decommissioned on September 1st, 2025.** This integration will no longer function after that date. We recommend migrating to [Tractive GPS](https://tractive.com), which offers a native [Home Assistant integration](https://www.home-assistant.io/integrations/tractive/) and has a special migration offer for Whistle customers. For details see [whistle.com](https://whistle.com). 
+
 <a href="https://www.buymeacoffee.com/RobertD502" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="100" width="424"></a>
 <a href="https://liberapay.com/RobertD502/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg" height="100" width="300"></a>
 

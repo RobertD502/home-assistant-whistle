@@ -36,5 +36,11 @@
                 }
             }
         }
+    },
+    "issues": {
+        "whistle_platform_decommission": {
+            "title": "Whistle Platform Decommission Notice",
+            "description": "The Whistle platform will be decommissioned on September 1st, 2025. This integration will no longer function after that date. We recommend migrating to Tractive GPS, which offers a Home Assistant integration and has a special migration offer for Whistle customers. Details can be found at whistle.com"
+        }
     }
 }

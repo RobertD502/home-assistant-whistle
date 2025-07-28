@@ -4,6 +4,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 
 from .const import (
     CONF_ZONE_METHOD,
@@ -19,6 +20,16 @@ from .coordinator import WhistleDataUpdateCoordinator
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """ Set up Whistle from a config entry. """
+
+    # Create deprecation notification
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        "whistle_platform_decommission",
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="whistle_platform_decommission",
+    )
 
     coordinator = WhistleDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
